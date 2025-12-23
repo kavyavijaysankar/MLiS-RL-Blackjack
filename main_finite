@@ -1,0 +1,27 @@
+if __name__ == "__main__":
+    # Initialize the environment with 1 deck and a fixed seed for reproducibility
+    env = BlackjackFiniteEnv(num_decks=1, seed=42)
+    obs = env.reset()
+    print(f"Start (Hand Total, Cards Remaining): {obs}")
+
+    done = False
+    total_score = 0
+    
+    while not done:
+        # Simple strategy: Hit (1) if total is less than 17, otherwise Stick (0)
+        hand_val, cards_left = obs
+        action = 1 if hand_val < 17 else 0
+        
+        print(f"Hand: {hand_val}, Cards Left: {cards_left} -> Action: {'Hit' if action==1 else 'Stick'}")
+        
+        obs, reward, done, info = env.step(action)
+        
+        if reward > 0:
+            print(f"--- Hand Won! Reward: {reward} ---")
+            total_score += reward
+        elif action == 1 and obs[0] <= 11 and not done: 
+            # Note: Since the step function automatically draws a new card when a hand ends,
+            # if we busted, 'obs' represents the value of the new hand.
+            print("--- Bust or Hand Continues ---")
+
+    print(f"Game Over (Deck Exhausted). Total Episode Score: {total_score}")
