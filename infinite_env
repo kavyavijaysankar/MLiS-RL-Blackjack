@@ -1,0 +1,164 @@
+import random
+from typing import List, Tuple, Optional, Dict, Any
+
+# -------------------------
+# 1) Actions
+# -------------------------
+STICK = 0
+HIT = 1
+
+# State: (player_sum, usable_ace)
+State = Tuple[int, bool]
+
+def score(total: int) -> int:
+    """
+    El bittikten sonra alınacak skor.
+    Kural: total <= 21 ise total^2, yoksa 0
+    """
+    return total * total if total <= 21 else 0
+
+
+def hand_value(cards: List[int]) -> State:
+    """
+    Elde bulunan kart listesine göre:
+      - player_sum: Blackjack kuralına göre en avantajlı toplam
+      - usable_ace: elde 11 olarak sayılabilen Ace var mı?
+    Kart temsili:
+      - Ace = 1
+      - 2..9 = kendisi
+      - 10/J/Q/K = 10
+
+    Mantık:
+      1) önce hepsini normal topla (Ace=1)
+      2) eğer Ace varsa ve total+10 <= 21 ise bir Ace'i 11 say (yani +10 ekle)
+    """
+    total = sum(cards)
+    usable_ace = False
+
+    # Ace varsa ve +10 eklemek 21'i geçirmiyorsa, Ace'i 11 sayabiliriz
+    if 1 in cards and total + 10 <= 21:
+        total += 10
+        usable_ace = True
+
+    return total, usable_ace
+
+
+# -------------------------
+# 3) Environment sınıfı
+# -------------------------
+class BlackjackInfiniteEnv:
+    """
+    Infinite deck (sonsuz deste) Blackjack environment.
+
+    ÖNEMLİ:
+    - Burada 'deck' diye bir liste TUTMUYORUZ.
+    - Her HIT'te yeni kartı "rastgele" çekiyoruz.
+    - Episode = 1 el (hand). El bitince done=True.
+    """
+
+    def __init__(self, seed: Optional[int] = None):
+        """
+        __init__ = bu class'tan bir env oluşturduğun anda 1 kere çalışır.
+        self = bu env nesnesinin kendisi (env'in hafızası).
+
+        Burada env'in içinde saklamak istediğimiz şeyleri başlatıyoruz:
+          - rng: rastgele kart çekmek için
+          - player_cards: eldeki kartların listesi
+          - done: hand bitti mi?
+        """
+        self.rng = random.Random(seed)   # rastgelelik kontrolü (seed aynıysa aynı sonuçlar)
+        self.player_cards: List[int] = []  # oyuncunun elindeki kartlar
+        self.done: bool = False            # episode bitti mi?
+
+    # ---- (A) Kart çekme ----
+    def draw_card(self) -> int:
+        """
+        Infinite destede kart çekmek: her seferinde aynı dağılımdan gelir.
+        Basit model:
+          - Ace: 1
+          - 2..9
+          - 10 (10/J/Q/K hepsi 10)
+        """
+        return self.rng.choice([1, 2, 3, 4, 5, 6, 7, 8, 9,10,10,10,10])
+
+    # ---- (B) State alma ----
+    def get_state(self) -> State:
+        """
+        Agent'in göreceği özet durum:
+          (player_sum, usable_ace)
+        """
+        return hand_value(self.player_cards)
+
+    # ---- (C) Reset ----
+    def reset(self) -> State:
+        """
+        Yeni bir episode (yeni el) başlatır.
+        - eli boşaltır
+        - done=False yapar
+        - 1 kart verir (PDF'deki gibi el en az 1 kartla başlasın)
+        - state döndürür
+        """
+        self.player_cards = []
+        self.done = False #eldeki kartları sildikten sonra eli bitmedi yapar.
+
+        # el 1 kartla başlasın
+        first = self.draw_card()
+        self.player_cards.append(first)
+
+        return self.get_state()
+
+    # ---- (D) Valid actions ----
+    def valid_actions(self, state: State):
+        """
+        Hand bitmediyse iki seçenek var: HIT veya STICK.
+        Hand bittiyse action yok.
+        """
+        if self.done:
+            return [] #el bittiyse hamle yok.
+        return [STICK, HIT] #bitmediyse hit or stick.
+
+    # ---- (E) Step ----
+    #agent bir hamle yaptı, oyun 1 adım ilerlesin.
+
+    def step(self, action: int) -> Tuple[State, int, bool, Dict[str, Any]]:
+        """
+        Agent bir action seçer, environment 1 adım ilerler.
+
+        Return:
+          next_state, reward, done, info
+
+        reward kuralı:
+          - hand bitmediyse 0
+          - hand bittiğinde:
+              total<=21 ise total^2, yoksa 0
+        """
+        if self.done:
+            # Episode bitmişse, tekrar step çağırmak mantıksız
+            return self.get_state(), 0, True, {"error": "Episode already done. Call reset()."}
+
+        if action == HIT:
+            # 1) kart çek ve ele ekle
+            card = self.draw_card()
+            self.player_cards.append(card)
+
+            # 2) yeni toplamı hesapla
+            total, usable = self.get_state()
+
+            # 3) bust olduysa hand biter
+            if total > 21:
+                self.done = True
+                return (total, usable), 0, True, {"hand_ended": True, "bust": True, "card": card}
+
+            # bust değilse hand devam
+            return (total, usable), 0, False, {"hand_ended": False, "card": card}
+
+        elif action == STICK:
+            # hand hemen biter, skor verilir
+            total, usable = self.get_state()
+            r = score(total)
+            self.done = True
+            return (total, usable), r, True, {"hand_ended": True, "bust": False}
+
+        else:
+            raise ValueError("Invalid action. Use HIT=1 or STICK=0.")
+
