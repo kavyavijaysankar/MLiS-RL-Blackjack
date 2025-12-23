@@ -1,0 +1,184 @@
+import random
+from typing import List, Tuple, Optional, Dict, Any
+
+# -------------------------
+# 1) Actions
+# -------------------------
+STICK = 0   # stop (end the hand)
+HIT = 1     # draw a card
+
+# State representation: (player_sum, usable_ace)
+State = Tuple[int, bool]
+
+
+def score(total: int) -> int:
+    """
+    Score obtained at the end of the hand.
+    Rule:
+      - if total <= 21, reward = total^2
+      - otherwise (bust), reward = 0
+    """
+    return total * total if total <= 21 else 0
+
+
+def hand_value(cards: List[int]) -> State:
+    """
+    Compute the blackjack hand value.
+
+    Returns:
+      - player_sum: the best achievable hand total under blackjack rules
+      - usable_ace: whether there is an Ace that can be counted as 11
+
+    Card representation:
+      - Ace = 1
+      - 2..9 = face value
+      - 10/J/Q/K = 10
+
+    Logic:
+      1) First sum all cards with Ace counted as 1
+      2) If there is at least one Ace and total + 10 <= 21,
+         count one Ace as 11 (i.e. add +10)
+    """
+    total = sum(cards)
+    usable_ace = False
+
+    # If there is an Ace and counting it as 11 does not bust
+    if 1 in cards and total + 10 <= 21:
+        total += 10
+        usable_ace = True
+
+    return total, usable_ace
+
+
+# -------------------------
+# 3) Environment class
+# -------------------------
+class BlackjackInfiniteEnv:
+    """
+    Blackjack environment with an infinite deck.
+
+    IMPORTANT:
+    - We do NOT store a deck list.
+    - Each HIT draws a new card independently at random.
+    - One episode corresponds to a single hand.
+    - The episode ends when done=True.
+    """
+
+    def __init__(self, seed: Optional[int] = None):
+        """
+        __init__ is called once when the environment object is created.
+        self refers to the environment instance itself (its internal memory).
+
+        Stored attributes:
+          - rng: random number generator
+          - player_cards: list of cards in the player's hand
+          - done: whether the current hand has ended
+        """
+        self.rng = random.Random(seed)        # controlled randomness
+        self.player_cards: List[int] = []     # cards currently in hand
+        self.done: bool = False               # is the episode finished?
+
+    # ---- (A) Draw a card ----
+    def draw_card(self) -> int:
+        """
+        Draw a card from an infinite deck.
+
+        Simplified model:
+          - Ace = 1
+          - 2..9 = face value
+          - 10/J/Q/K = 10
+        """
+        return self.rng.choice([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10])
+
+    # ---- (B) Get state ----
+    def get_state(self) -> State:
+        """
+        Return the observable state for the agent:
+          (player_sum, usable_ace)
+        """
+        return hand_value(self.player_cards)
+
+    # ---- (C) Reset ----
+    def reset(self) -> State:
+        """
+        Start a new episode (new hand).
+          - clear the current hand
+          - set done=False
+          - give one initial card
+          - return the initial state
+        """
+        self.player_cards = []
+        self.done = False  # the hand is now active
+
+        # Start the hand with one card
+        first = self.draw_card()
+        self.player_cards.append(first)
+
+        return self.get_state()
+
+    # ---- (D) Valid actions ----
+    def valid_actions(self, state: State):
+        """
+        If the hand is not finished, two actions are possible: HIT or STICK.
+        If the hand is finished, no actions are available.
+        """
+        if self.done:
+            return []              # no actions if episode ended
+        return [STICK, HIT]        # otherwise, HIT or STICK
+
+    # ---- (E) Step ----
+    # The agent chooses an action, the environment advances by one step.
+    def step(self, action: int) -> Tuple[State, int, bool, Dict[str, Any]]:
+        """
+        Apply an action and advance the environment by one step.
+
+        Returns:
+          next_state, reward, done, info
+
+        Reward rule:
+          - 0 if the hand is still ongoing
+          - if the hand ends:
+              total <= 21 -> total^2
+              total > 21  -> 0
+        """
+        if self.done:
+            # Calling step after the episode ended is invalid
+            return self.get_state(), 0, True, {
+                "error": "Episode already done. Call reset()."
+            }
+
+        if action == HIT:
+            # 1) draw a card and add it to the hand
+            card = self.draw_card()
+            self.player_cards.append(card)
+
+            # 2) compute new hand value
+            total, usable = self.get_state()
+
+            # 3) if bust, the hand ends
+            if total > 21:
+                self.done = True
+                return (total, usable), 0, True, {
+                    "hand_ended": True,
+                    "bust": True,
+                    "card": card,
+                }
+
+            # otherwise, the hand continues
+            return (total, usable), 0, False, {
+                "hand_ended": False,
+                "card": card,
+            }
+
+        elif action == STICK:
+            # The hand ends immediately and the score is given
+            total, usable = self.get_state()
+            r = score(total)
+            self.done = True
+            return (total, usable), r, True, {
+                "hand_ended": True,
+                "bust": False,
+            }
+
+        else:
+            raise ValueError("Invalid action. Use HIT=1 or STICK=0.")
