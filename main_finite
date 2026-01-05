@@ -1,27 +1,45 @@
 if __name__ == "__main__":
-    # Initialize the environment with 1 deck and a fixed seed for reproducibility
+    # 1. Initialize the environment with 1 deck
+    # Contributor A's new state: (total, usable_ace, running_count, cards_remaining)
     env = BlackjackFiniteEnv(num_decks=1, seed=42)
     obs = env.reset()
-    print(f"Start (Hand Total, Cards Remaining): {obs}")
+    
+    # Unpack the new 4-element state
+    total, usable_ace, count, remaining = obs
+    print(f"--- Episode Start ---")
+    print(f"Initial State -> Sum: {total}, Usable Ace: {usable_ace}, Count: {count}, Deck: {remaining}")
 
     done = False
-    total_score = 0
+    total_episode_reward = 0
+    hand_count = 1
     
     while not done:
-        # Simple strategy: Hit (1) if total is less than 17, otherwise Stick (0)
-        hand_val, cards_left = obs
-        action = 1 if hand_val < 17 else 0
+        # 2. Strategy: Hit if total < 17 (Standard Dealer-style baseline)
+        # Note: An RL agent would eventually use 'count' to decide whether to hit/stick.
+        action = 1 if total < 17 else 0
         
-        print(f"Hand: {hand_val}, Cards Left: {cards_left} -> Action: {'Hit' if action==1 else 'Stick'}")
+        action_str = "HIT" if action == 1 else "STICK"
+        print(f"[Hand {hand_count}] Sum: {total} | Count: {count} | Action: {action_str}")
         
+        # 3. Advance the environment
         obs, reward, done, info = env.step(action)
         
-        if reward > 0:
-            print(f"--- Hand Won! Reward: {reward} ---")
-            total_score += reward
-        elif action == 1 and obs[0] <= 11 and not done: 
-            # Note: Since the step function automatically draws a new card when a hand ends,
-            # if we busted, 'obs' represents the value of the new hand.
-            print("--- Bust or Hand Continues ---")
+        # 4. Update local state variables from the new observation
+        total, usable_ace, count, remaining = obs
+        
+        # 5. Check if a hand ended to log results
+        if info["hand_ended"]:
+            if reward > 0:
+                print(f">> Hand Ended! Reward: {reward} (Square of {total if action==0 else '?'})")
+            elif info.get("bust"):
+                print(f">> BUSTED! Reward: 0")
+            
+            total_episode_reward += reward
+            hand_count += 1
+            print(f"--- Moving to Next Hand | Cards left in deck: {remaining} ---")
 
-    print(f"Game Over (Deck Exhausted). Total Episode Score: {total_score}")
+    print(f"\n==========================================")
+    print(f"EPISODE OVER")
+    print(f"Total Hands Played: {hand_count - 1}")
+    print(f"Total Accumulated Score: {total_episode_reward}")
+    print(f"==========================================")
