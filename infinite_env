@@ -4,8 +4,8 @@ from typing import List, Tuple, Optional, Dict, Any
 # -------------------------
 # 1) Actions
 # -------------------------
-STICK = 0
-HIT = 1
+STICK = 0 # stop
+HIT = 1 # draw a card
 
 # State: (player_sum, usable_ace)
 State = Tuple[int, bool]
