@@ -10,7 +10,7 @@ def run_infinite_validation():
     
     # 1. Initialize the environment
     # Since D = infinity, the probabilities are constant.
-    env = BlackjackInfiniteEnv(seed=42)
+    env = BlackjackInfiniteEnv(seed=41)
     
     # reset() starts the hand and deals the first card
     obs = env.reset()
