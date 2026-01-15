@@ -28,7 +28,7 @@ class BlackjackAgent:
         
         # The Q-Table: Maps State -> [Value of STICK, Value of HIT]
         # We use a defaultdict so that any new state is initialized to [0.0, 0.0]
-        self.q_table = defaultdict(lambda: [0.0, 500.0])
+        self.q_table = defaultdict(lambda: [0.0, 0.0])
 
     def get_action(self, state):
         """
@@ -75,3 +75,67 @@ class BlackjackAgent:
     def get_q_value(self, state, action):
         """Helper to look up a value for debugging."""
         return self.q_table[state][action]
+    
+
+class Agent_finite_deck:
+    """
+    Reinforcement Learning Agent designed for Finite Deck Blackjack.
+    
+    Features:
+    - Biased Initialization (Optimistic for Hits) to encourage exploration.
+    - Specialized default hyperparameters for Card Counting tasks.
+    """
+    
+    def __init__(self, alpha=0.01, gamma=0.95, epsilon=1.0, min_epsilon=0.01, epsilon_decay=0.99999):
+        """
+        Initialize the agent with hyperparameters tuned for the Finite Deck problem.
+        
+        :param alpha: Learning Rate. Default 0.01 is stable for stochastic environments.
+        :param gamma: Discount Factor. 0.95 values future hands (End Game) highly.
+        :param epsilon: Starting exploration rate.
+        :param min_epsilon: Minimum exploration floor.
+        :param epsilon_decay: Decay rate. Default is very slow for long training.
+        """
+        self.alpha = alpha
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.min_epsilon = min_epsilon
+        self.epsilon_decay = epsilon_decay
+        
+        # BIASED INITIALIZATION: 
+        self.q_table = defaultdict(lambda: [0.0, 500.0]) # encourages hitting in new states to learn more
+
+    def get_action(self, state):
+        """
+        Choose an action using the Epsilon-Greedy Policy.
+        """
+        if random.random() < self.epsilon:
+            return random.choice([0, 1])
+        return np.argmax(self.q_table[state])
+
+    def update(self, state, action, reward, next_state, done):
+        """
+        Standard Q-Learning Update Rule.
+        """
+        old_val = self.q_table[state][action]
+        
+        if done:
+            next_max = 0
+        else:
+            next_max = np.max(self.q_table[next_state])
+        
+        # Q(s,a) = Q(s,a) + alpha * [Reward + gamma * max(Q(s',a')) - Q(s,a)]
+        new_val = old_val + self.alpha * (reward + self.gamma * next_max - old_val)
+        self.q_table[state][action] = new_val
+
+    def decay_epsilon(self):
+        """
+        Decay epsilon until it reaches the minimum threshold.
+        """
+        if self.epsilon > self.min_epsilon:
+            self.epsilon *= self.epsilon_decay
+
+    def get_q_value(self, state, action):
+        """Helper to inspect Q-values."""
+        return self.q_table[state][action]
+
