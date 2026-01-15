@@ -28,7 +28,7 @@ class BlackjackAgent:
         
         # The Q-Table: Maps State -> [Value of STICK, Value of HIT]
         # We use a defaultdict so that any new state is initialized to [0.0, 0.0]
-        self.q_table = defaultdict(lambda: [0.0, 0.0])
+        self.q_table = defaultdict(lambda: [0.0, 500.0])
 
     def get_action(self, state):
         """
