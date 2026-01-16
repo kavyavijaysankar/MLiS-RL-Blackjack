@@ -90,20 +90,35 @@ class BlackjackFiniteEnv:
             
         return card
 
-    def get_state(self) -> Tuple[int, bool, int, int]:
+    def get_state(self) -> Tuple[int, bool, int, float]:
         """
         Defines the 'Observation' sent to the RL Agent.
         
-        The state must contain enough information for the agent to learn:
-        1. Current hand total (to know if it should hit/stick).
-        2. Usable Ace status (changes the risk of hitting).
-        3. Running Count (memory of past cards).
-        4. Cards Remaining (to know the 'weight' or reliability of the count).
+        The state now includes True Count and Deck Depth bucketing to 
+        restore the Markov property in a finite deck scenario.
         """
         total, usable_ace = hand_value(self.player_cards)
-        return (total, usable_ace, self.running_count, len(self.deck))
+        
+        # 1. NORMALIZE DECK DEPTH ("Decks Remaining")
+        decks_remaining = len(self.deck) / 52.0
+        # Round to nearest 0.5 for a discrete state space
+        decks_bucket = round(decks_remaining * 2) / 2
+        
+        # 2. TRUE COUNT (The Universal Metric)
+        # Formula: Running Count / Decks Remaining
+        divisor = max(0.5, decks_remaining) # Prevent division by zero
+        true_count = self.running_count / divisor
+        
+        # Bucket True Count into discrete categories for the Q-table
+        if true_count >= 3: tc_bucket = 3
+        elif true_count >= 1: tc_bucket = 1
+        elif true_count <= -3: tc_bucket = -3
+        elif true_count <= -1: tc_bucket = -1
+        else: tc_bucket = 0
+        
+        return (total, usable_ace, tc_bucket, decks_bucket)
 
-    def reset(self) -> Tuple[int, bool, int, int]:
+    def reset(self) -> Tuple[int, bool, int, float]:
         """
         Starts a brand new episode. Shuffles the deck and deals the 
         first card of the first hand.
@@ -112,7 +127,7 @@ class BlackjackFiniteEnv:
         self.player_cards = [self.draw_card()]
         return self.get_state()
 
-    def step(self, action: int) -> Tuple[Tuple[int, bool, int, int], int, bool, Dict[str, Any]]:
+    def step(self, action: int) -> Tuple[Tuple[int, bool, int, float], int, bool, Dict[str, Any]]:
         """
         Processes the player's action and advances the environment.
         
