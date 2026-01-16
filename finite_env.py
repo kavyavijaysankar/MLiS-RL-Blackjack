@@ -1,21 +1,12 @@
 import random
 from typing import List, Tuple, Optional, Dict, Any
 
-# ACTION SPACE
-
-# In Reinforcement Learning, the agent chooses from these discrete actions.
+# 2  discrete actions
 STICK = 0  # End the current hand and receive a reward based on the current sum.
-HIT = 1    # Request another card to increase the hand sum.
+HIT = 1    # Request another card to increase the hand sum at the risk of busting.
 
 def score(total: int) -> int:
-    """
-    Implements the Quadratic Reward Function: reward = total^2.
-    
-    As per the project description (Eq. 1), if the player stays under or 
-    at 21, they receive the square of their total. If they exceed 21, 
-    the reward for that hand is 0.
-    """
-    return total * total if total <= 21 else 0
+    return total * total if total <= 21 else 0 # Quadratic reward function: reward = total^2 if ≤ 21 
 
 def hand_value(cards: List[int]) -> Tuple[int, bool]:
     """
