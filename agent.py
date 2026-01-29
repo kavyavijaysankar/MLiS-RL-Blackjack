@@ -1,7 +1,6 @@
 import random
 import numpy as np
 from collections import defaultdict
-
 class BlackjackAgent:
     """
     Reinforcement Learning Agent using Q-Learning to play Blackjack.

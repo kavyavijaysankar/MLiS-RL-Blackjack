@@ -1,58 +1,46 @@
-# baseline validation for infinite deck blackjack environment
-
+import numpy as np
 from infinite_env import BlackjackInfiniteEnv
 
-def run_infinite_validation():
-    """
-    Runs a single hand in the infinite deck environment.
-    In this setting, one hand = one episode.
-    """
-    
-    # 1. Initialize the environment
-    # Since D = infinity, the probabilities are constant.
+def run_baseline_validation(episodes_to_average=100000):
+    # 1. Single Hand Demonstration
     env = BlackjackInfiniteEnv(seed=42)
-    
-    # reset() starts the hand and deals the first card
     obs = env.reset()
-    
-    # The state in the infinite env is simpler: (Total, Usable Ace)
-    # We do NOT need "count" or "remaining cards" here.
     player_sum, usable_ace = obs
     
     print("="*50)
-    print("STARTING INFINITE DECK HAND (EPISODE)")
+    print("SINGLE HAND BASELINE DEMONSTRATION")
     print(f"Initial State -> Sum: {player_sum}, Usable Ace: {usable_ace}")
     print("="*50 + "\n")
 
     done = False
-    
-    # In the Infinite Env, this loop runs for exactly one hand.
     while not done:
-        
         # BASELINE STRATEGY: Hit if total < 17
         action = 1 if player_sum < 17 else 0
-        
         action_name = "HIT" if action == 1 else "STICK"
         print(f"Sum: {player_sum} | Action: {action_name}")
         
-        # Advance the game
-        obs, reward, done, info = env.step(action)
-        
-        # Update local variables
+        obs, reward, done, _ = env.step(action)
         player_sum, usable_ace = obs
         
         if not done:
             print(f" >> Drew a card. New Sum: {player_sum}")
         else:
-            # Hand is over
             if player_sum > 21:
                 print(f" >> RESULT: BUSTED. Reward: 0")
             else:
                 print(f" >> RESULT: STICK. Reward: {reward}")
 
-    print("\n" + "="*50)
-    print(f"HAND FINISHED. Final Score: {reward}")
-    print("="*50)
+    # 2. Print Baseline Strategy Table
+    print("\n" + "="*45)
+    print("FIXED BASELINE STRATEGY")
+    print("="*45)
+    print(f"{'Sum':<6} | {'Action':<18}")
+    print("-" * 45)
+
+    for s in range(11, 22):
+        decision = "HIT" if s < 17 else "STICK"
+        print(f" {s:<5} | {decision:<18}")
+    print("="*45)
 
 if __name__ == "__main__":
-    run_infinite_validation()
+    run_baseline_validation()
