@@ -1,9 +1,7 @@
 import random
 from typing import List, Tuple, Optional, Dict, Any
 
-# -------------------------
-# 1) Actions
-# -------------------------
+# Actions
 STICK = 0 # stop
 HIT = 1 # draw a card
 
@@ -22,7 +20,7 @@ According to the hand list:
 - usable_ace: Is there an Ace that can be counted as 11?
 Card representation:
 - Ace = 1
-- 2..9 = itself
+- 2-9 = itself
 - 10/J/Q/K = 10
 
 Logic:
@@ -39,20 +37,12 @@ Logic:
 
     return total, usable_ace
 
-
-# -------------------------
 # 3) Environment 
-# -------------------------
 class BlackjackInfiniteEnv:
-    """
 
-Infinite deck Blackjack environment.
-
-IMPORTANT:
-- We DO NOT keep a 'deck' list here. - We draw a new card "randomly" with each hit.
-- Episode = 1 hand. Done = True when the hand is finished.
-""
-    """
+# Infinite deck Blackjack environment.
+# No deck list. new card drawn randomly with each hit
+# 1 Episode = 1 hand. Done = True when the hand is finished.
 
     def __init__(self, seed: Optional[int] = None):
     
@@ -60,7 +50,7 @@ IMPORTANT:
         self.player_cards: List[int] = []  
         self.done: bool = False           
 
-    # ---- (A) draw card ----
+    # draw card
     def draw_card(self) -> int:
         """
       model:
@@ -70,7 +60,7 @@ IMPORTANT:
         """
         return self.rng.choice([1, 2, 3, 4, 5, 6, 7, 8, 9,10,10,10,10])
 
-    # ---- (B) State  ----
+    # State
     def get_state(self) -> State:
         """
         Agent will see as:
@@ -78,7 +68,7 @@ IMPORTANT:
         """
         return hand_value(self.player_cards)
 
-    # ---- (C) Reset ----
+    # Reset
     def reset(self) -> State:
         
         self.player_cards = []
@@ -89,14 +79,14 @@ IMPORTANT:
 
         return self.get_state()
 
-    # ---- (D) Valid actions ----
+    # Valid actions
     def valid_actions(self, state: State):
 
         if self.done:
             return [] #no action if deck is over
         return [STICK, HIT] #if not finished, hit or stick.
 
-    # ---- (E) Step ----
+    # Step
     #agent's movement and action 1 step forward
 
     def step(self, action: int) -> Tuple[State, int, bool, Dict[str, Any]]:
