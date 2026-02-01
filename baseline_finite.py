@@ -1,7 +1,8 @@
 
 from finite_env import BlackjackFiniteEnv
+import matplotlib.pyplot as plt
 
-def baseline(num_decks=1, num_episodes=1000, seed=43):
+def baseline(num_decks=1, num_episodes=50000, seed=43):
     env = BlackjackFiniteEnv(num_decks=num_decks, seed=seed)
     total_rewards_all_episodes = []
     
@@ -23,12 +24,11 @@ def baseline(num_decks=1, num_episodes=1000, seed=43):
                 episode_reward += reward
 
         total_rewards_all_episodes.append(episode_reward)
-
+    
     # stats
     avg_score = sum(total_rewards_all_episodes) / num_episodes
     max_score = max(total_rewards_all_episodes)
     min_score = min(total_rewards_all_episodes)
-
 
     print(f"Total Episodes: {num_episodes}")
     print(f"Number of Decks: {num_decks}")
