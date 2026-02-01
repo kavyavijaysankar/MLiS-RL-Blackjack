@@ -1,56 +1,42 @@
-# finite deck episode to validate environment logic & get baseline score
 
 from finite_env import BlackjackFiniteEnv
 
-# runs a full episode to get a baseline score
-def run_validation_episode():
-    env = BlackjackFiniteEnv(num_decks=1, seed=42) # set number of decks
+def baseline(num_decks=1, num_episodes=1000, seed=43):
+    env = BlackjackFiniteEnv(num_decks=num_decks, seed=seed)
+    total_rewards_all_episodes = []
     
-    # start episode
-    obs = env.reset()
-    
-    # Unpack the 4-part state: (Total, Usable Ace, Running Count, Cards Left)
-    total, usable_ace, count, remaining = obs
-    
-    print(f"Initial State -> Sum: {total}, Count: {count}, Deck: {remaining}")
-
-    done = False
-    total_episode_reward = 0
-    hand_count = 1
-    
-    # episode loop
-    while not done:
-        action = 1 if total < 17 else 0 # hit if under 17, else stick
+    for i in range(num_episodes):
+        obs = env.reset()
+        total, usable_ace, tc_bucket, decks_bucket = obs
         
-        action_name = "HIT" if action == 1 else "STICK"
-        print(f"[Hand {hand_count}] Sum: {total} | Count: {count} | Action: {action_name}")
-
-        obs, reward, done, info = env.step(action)
+        done = False
+        episode_reward = 0
         
-        # Update our tracking variables from the new state
-        total, usable_ace, count, remaining = obs
-        
-        # Check if the hand finished (either by sticking or busting)
-        if info["hand_ended"]:
-            if info.get("bust"):
-                print(f"RESULT: BUSTED. Reward: 0")
-            else:
-                # Reward is calculated as (total^2)
-                print(f"RESULT: STICK. Reward: {reward}")
-            total_episode_reward += reward
+        while not done:
+            # Hit if under 17, else Stick
+            action = 1 if total < 17 else 0 
             
-            # next hand or end of episode
-            if not done:
-                print(f"NEW HAND DEALT | Cards left: {remaining}\n")
-                hand_count += 1
-            else:
-                print(f"DECK EXHAUSTED\n")
+            obs, reward, done, info = env.step(action)
+            total, usable_ace, tc_bucket, decks_bucket = obs
+            
+            if info["hand_ended"]:
+                episode_reward += reward
 
-    print("EPISODE SUMMARY")
-    print(f"Total Hands Played: {hand_count}")
-    print(f"Total Accumulated Score: {total_episode_reward}")
+        total_rewards_all_episodes.append(episode_reward)
+
+    # stats
+    avg_score = sum(total_rewards_all_episodes) / num_episodes
+    max_score = max(total_rewards_all_episodes)
+    min_score = min(total_rewards_all_episodes)
 
 
+    print(f"Total Episodes: {num_episodes}")
+    print(f"Number of Decks: {num_decks}")
+    print(f"Average Score: {avg_score:.2f}")
+    print(f"Max Episode Score: {max_score}")
+    print(f"Min Episode Score: {min_score}")
+    
+    return avg_score
 
 if __name__ == "__main__":
-    run_validation_episode()
+    baseline()
