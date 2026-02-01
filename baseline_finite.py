@@ -2,9 +2,15 @@
 
 from finite_env import BlackjackFiniteEnv
 
+<<<<<<< Updated upstream
 # runs a full episode to get a baseline score
 def run_validation_episode():
     env = BlackjackFiniteEnv(num_decks=1, seed=42) # set number of decks
+=======
+def baseline(num_decks=8, num_episodes=1000, seed=43):
+    env = BlackjackFiniteEnv(num_decks=num_decks, seed=seed)
+    total_rewards_all_episodes = []
+>>>>>>> Stashed changes
     
     # start episode
     obs = env.reset()
